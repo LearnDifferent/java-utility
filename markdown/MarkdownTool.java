@@ -1,3 +1,6 @@
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MarkdownTool {
@@ -6,14 +9,38 @@ public class MarkdownTool {
     private static String id;
     // key: word, value: id
     private static final Map<String, String> TOC = new LinkedHashMap<>();
+    // 上下分隔符
+    private static final String SEP = "=================================";
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        runTool(scanner);
-        scanner.close();
+
+        try (Scanner scanner = new Scanner(System.in);
+             FileOutputStream fos = new FileOutputStream(getLogFile());
+             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+             PrintWriter pw = new PrintWriter(osw)) {
+
+            runTool(scanner, pw);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    private static void runTool(Scanner scanner) {
+    private static File getLogFile() throws IOException {
+        Calendar calendar = Calendar.getInstance();
+        Date time = calendar.getTime();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS");
+        String filename = "log_" + sdf.format(time) + ".txt";
+        // 当前目录创建一个名为 markdown_temp 的目录，并在其中存储记录
+        File file = new File("markdown_temp", filename);
+
+        if (file.getParentFile().mkdirs() || file.createNewFile()) {
+            return file;
+        } else {
+            throw new IOException("Fail to Create Log File");
+        }
+    }
+
+    private static void runTool(Scanner scanner, PrintWriter pw) {
 
         System.out.println("Type in a Word:");
 
@@ -22,7 +49,7 @@ public class MarkdownTool {
 
             if ("".equals(word) || word == null) {
                 System.out.println("Word is Empty (Hit Enter)");
-                System.out.println("===========================");
+                System.out.println(SEP);
                 continue;
             }
 
@@ -35,9 +62,9 @@ public class MarkdownTool {
 
             if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
                 changeIdIfNecessary(scanner);
-                printResultIfEmphasis(scanner);
+                printResultIfEmphasis(scanner, pw);
             } else {
-                printResult();
+                printResult(pw);
             }
 
             // 将 word 和 id 加入进去
@@ -47,7 +74,7 @@ public class MarkdownTool {
 
         } while (!"".equals(word));
 
-        generateTocIfNecessary(scanner);
+        generateTocIfNecessary(scanner, pw);
     }
 
     private static String getId(String word) {
@@ -73,28 +100,37 @@ public class MarkdownTool {
         }
     }
 
-    private static void printResultIfEmphasis(Scanner scanner) {
+    private static void printResultIfEmphasis(Scanner scanner, PrintWriter pw) {
 
         System.out.println("Emphasize Word? (y/n), default: n");
 
         if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
-            System.out.println("**<span id=\"" + id + "\">" + word + "</span>**");
-            System.out.println("====================================");
-            System.out.println("**[" + word + "](#" + id + ")**");
-            System.out.println("====================================");
+            String line1 = "**<span id=\"" + id + "\">" + word + "</span>**";
+            String line2 = "**[" + word + "](#" + id + ")**";
+
+            printTwoLine(pw, line1, line2);
+
         } else {
-            printResult();
+            printResult(pw);
         }
     }
 
-    private static void printResult() {
-        System.out.println("<span id=\"" + id + "\">" + word + "</span>");
-        System.out.println("====================================");
-        System.out.println("[" + word + "](#" + id + ")");
-        System.out.println("====================================");
+    private static void printTwoLine(PrintWriter pw, String line1, String line2) {
+        printToConsoleAndFile(line1, pw);
+        // 这一行只在命令行中输出
+        System.out.println(SEP);
+        printToConsoleAndFile(line2, pw);
+        printToConsoleAndFile(SEP, pw);
     }
 
-    private static void generateTocIfNecessary(Scanner scanner) {
+    private static void printResult(PrintWriter pw) {
+        String line1 = "<span id=\"" + id + "\">" + word + "</span>";
+        String line2 = "[" + word + "](#" + id + ")";
+
+        printTwoLine(pw, line1, line2);
+    }
+
+    private static void generateTocIfNecessary(Scanner scanner, PrintWriter pw) {
         System.out.println("Generate TOC? (y/n), default: y");
 
         // 只要不是 n，就打印 TOC
@@ -102,21 +138,18 @@ public class MarkdownTool {
 
             printCurrentToc();
             deleteElementInToc(scanner);
-            printToc();
+            printFinalToc(pw);
         }
     }
 
     private static void printCurrentToc() {
         System.out.println("Here are the current words and id:");
-        System.out.println("=================================");
-
+        System.out.println(SEP);
         // No.
         int[] count = {0};
-
         // 遍历打印
         TOC.forEach((k, v) -> System.out.println("No." + count[0]++ + " | Word: " + k + " | ID: " + v));
-
-        System.out.println("=================================");
+        System.out.println(SEP);
     }
 
     private static void deleteElementInToc(Scanner scanner) {
@@ -185,18 +218,23 @@ public class MarkdownTool {
             }
         });
 
-        System.out.println("=================");
+        System.out.println(SEP);
         System.out.println("Words and IDs to Delete:");
         keysToDelete.forEach(k -> System.out.println("Word: " + k + " | ID: " + TOC.get(k)));
-        System.out.println("=================");
+        System.out.println(SEP);
         return keysToDelete;
     }
 
-    private static void printToc() {
-
-        System.out.println("Topics:");
-        TOC.forEach((k, v) -> System.out.println("- [" + k.trim() + "](#" + v + ")"));
+    private static void printFinalToc(PrintWriter pw) {
+        printToConsoleAndFile("Topics:", pw);
+        TOC.forEach((k, v) -> printToConsoleAndFile("- [" + k.trim() + "](#" + v + ")", pw));
     }
 
-
+    private static void printToConsoleAndFile(String line, PrintWriter pw) {
+        // 在控制行打印
+        System.out.println(line);
+        // 放到到文件中
+        pw.println(line);
+        pw.flush();
+    }
 }
