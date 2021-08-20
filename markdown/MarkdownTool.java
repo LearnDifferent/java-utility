@@ -4,7 +4,8 @@ public class MarkdownTool {
 
     private static String word;
     private static String id;
-    private static List<String> wordList = new ArrayList<>();
+    // key: word, value: id
+    private static final Map<String, String> TOC = new LinkedHashMap<>();
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -25,7 +26,7 @@ public class MarkdownTool {
                 continue;
             }
 
-            id = putWordToListAndGetId(word);
+            id = getId(word);
 
             System.out.println("Word: " + word);
             System.out.println("ID: " + id);
@@ -39,6 +40,9 @@ public class MarkdownTool {
                 printResult();
             }
 
+            // 将 word 和 id 加入进去
+            TOC.put(word, id);
+
             System.out.println("Type in Another Word, or Hit Enter to Exit:");
 
         } while (!"".equals(word));
@@ -46,110 +50,8 @@ public class MarkdownTool {
         generateTocIfNecessary(scanner);
     }
 
-    private static void generateTocIfNecessary(Scanner scanner) {
-        System.out.println("Generate TOC? (y/n), default: n");
-
-        // 输入 y 的时候就打印 TOC
-        if (scanner.nextLine().equalsIgnoreCase("y")) {
-
-            printWordList();
-            deleteWordsInWordList(scanner);
-            printToc();
-        }
-    }
-
-
-    private static void deleteWordsInWordList(Scanner scanner) {
-        while (true) {
-            System.out.println("Type in the word's number you want to delete");
-            System.out.println("For Example: To delete No.1, No.2 and No.4, type: 1 2 4");
-            System.out.println("If no words to delete, hit Enter");
-
-            // 输入的 No.
-            String nums = scanner.nextLine();
-
-            if ("".equals(nums) || nums == null) {
-                break;
-            }
-
-            Set<String> deleteWords = getDeleteWords(nums);
-
-            System.out.println("Type in 'd' to delete; " +
-                    "Type in 'c' to clear and reselect; " +
-                    "Hit Enter to cancel delete motion and print TOC");
-
-            String flag = scanner.nextLine().trim();
-
-            if (flag.equalsIgnoreCase("d")) {
-                wordList.removeAll(deleteWords);
-                System.out.println("Deleted!");
-                printWordList();
-                System.out.println("Need to delete more? (y/n), default: n");
-                if (!scanner.nextLine().trim().equalsIgnoreCase("y")) {
-                    // 只要输入的不是 y，就断开循环
-                    break;
-                }
-            } else if (flag.equalsIgnoreCase("c")) {
-                // 打印一下当前 wordList，然后继续 while 循环
-                printWordList();
-            } else {
-                break;
-            }
-        }
-    }
-
-    private static Set<String> getDeleteWords(String nums) {
-        // 输入的每个数字
-        String[] split = nums.split(" ");
-        // 需要删除的词
-        Set<String> deleteWords = new HashSet<>();
-
-        Arrays.stream(split).forEach(n -> {
-            try {
-                // 获取 index，如果不是就抛出 NumberFormatException
-                int i = Integer.parseInt(n.trim());
-                // 获取该 index 的 wordList 的值，可能会抛出 IndexOutOfBoundsException
-                // 然后将该值放入 deleteWords 中
-                deleteWords.add(wordList.get(i));
-            } catch (NumberFormatException | IndexOutOfBoundsException e) {
-                System.out.println(n + " is not an appropriate number.");
-            }
-        });
-
-        System.out.println("=================");
-        System.out.println("Words to Delete:");
-        deleteWords.forEach(System.out::println);
-        System.out.println("=================");
-        return deleteWords;
-    }
-
-    private static void printWordList() {
-        System.out.println("Here are the current words:");
-        System.out.println("=================================");
-        for (int i = 0; i < wordList.size(); i++) {
-            System.out.println("No." + i + ": " + wordList.get(i));
-        }
-        System.out.println("=================================");
-    }
-
-    private static void printToc() {
-        StringBuffer sb = new StringBuffer("Topics:" + System.lineSeparator());
-        wordList.forEach(w -> sb.append("- ")
-                .append(w.trim())
-                .append(System.lineSeparator()));
-        System.out.println(sb.toString());
-    }
-
-    private static String putWordToListAndGetId(String word) {
-
-        // trim 一下
-        String w = word.trim();
-
-        // 将 word 放入列表中
-        wordList.add(w);
-
-        // 生成 id 并返回
-        return w.toLowerCase().replaceAll(" ", "-");
+    private static String getId(String word) {
+        return word.trim().toLowerCase().replaceAll(" ", "-");
     }
 
     private static void changeIdIfNecessary(Scanner scanner) {
@@ -191,4 +93,110 @@ public class MarkdownTool {
         System.out.println("[" + word + "](#" + id + ")");
         System.out.println("====================================");
     }
+
+    private static void generateTocIfNecessary(Scanner scanner) {
+        System.out.println("Generate TOC? (y/n), default: y");
+
+        // 只要不是 n，就打印 TOC
+        if (!scanner.nextLine().equalsIgnoreCase("n")) {
+
+            printCurrentToc();
+            deleteElementInToc(scanner);
+            printToc();
+        }
+    }
+
+    private static void printCurrentToc() {
+        System.out.println("Here are the current words and id:");
+        System.out.println("=================================");
+
+        // No.
+        int[] count = {0};
+
+        // 遍历打印
+        TOC.forEach((k, v) -> System.out.println("No." + count[0]++ + " | Word: " + k + " | ID: " + v));
+
+        System.out.println("=================================");
+    }
+
+    private static void deleteElementInToc(Scanner scanner) {
+        while (true) {
+            System.out.println("Type in the word's number you want to delete");
+            System.out.println("For Example: To delete No.1, No.2 and No.4, type: 1 2 4");
+            System.out.println("If no words to delete, hit Enter");
+
+            // 输入的 No.
+            String nums = scanner.nextLine();
+
+            if ("".equals(nums) || nums == null) {
+                break;
+            }
+
+            // 获取需要删除的 keys
+            Set<String> keysToDelete = getDeleteKeys(nums);
+
+            System.out.println("Type in 'd' to delete; " +
+                    "Type in 'c' to clear and reselect; " +
+                    "Hit Enter to cancel delete motion and print TOC");
+
+            String flag = scanner.nextLine().trim();
+
+            if (flag.equalsIgnoreCase("d")) {
+                // 每个 keysToDelete 中的词，都是 toc 中需要删除的 key
+                keysToDelete.forEach(key -> {
+                    TOC.remove(key);
+                    System.out.println("Deleted: " + key);
+                });
+                printCurrentToc();
+                System.out.println("Type in 'd' to delete more; Hit Enter to print TOC");
+                if (!scanner.nextLine().trim().equalsIgnoreCase("d")) {
+                    // 只要输入的不是 d，就断开循环
+                    break;
+                }
+            } else if (flag.equalsIgnoreCase("c")) {
+                // 打印一下当前 wordList，然后继续 while 循环
+                printCurrentToc();
+            } else {
+                break;
+            }
+        }
+    }
+
+    private static Set<String> getDeleteKeys(String nums) {
+        // 输入的每个数字
+        String[] split = nums.split(" ");
+
+        // 将 toc 中的 key 转化为列表
+        List<String> keys = new ArrayList<>(TOC.keySet());
+
+        // 需要删除的 keys 列表，用于存储需要删除的 keys
+        Set<String> keysToDelete = new HashSet<>();
+
+        Arrays.stream(split).forEach(n -> {
+            try {
+                // 获取输入的数字作为 index，如果不是数字就抛出 NumberFormatException
+                int index = Integer.parseInt(n.trim());
+                // 获取 keys 列表中，该 index 位置的 key
+                String key = keys.get(index);
+                // 存储该 key 到需要删除的 keys 列表中
+                keysToDelete.add(key);
+            } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                System.out.println(n + " is not an appropriate number.");
+            }
+        });
+
+        System.out.println("=================");
+        System.out.println("Words and IDs to Delete:");
+        keysToDelete.forEach(k -> System.out.println("Word: " + k + " | ID: " + TOC.get(k)));
+        System.out.println("=================");
+        return keysToDelete;
+    }
+
+    private static void printToc() {
+
+        System.out.println("Topics:");
+        TOC.forEach((k, v) -> System.out.println("- [" + k.trim() + "](#" + v + ")"));
+    }
+
+
 }
