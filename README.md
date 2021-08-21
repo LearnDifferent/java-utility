@@ -13,10 +13,10 @@ cd java-utility
 
 ## Build a jar and run it
 
-Take "Markdown Tool" for example. The directory is [markdown](./markdown) and the Main Class is `MarkdownTool`:
+Take "Markdown Tool" for example. The directory is [Markdown](./Markdown) and the Main Class is `MarkdownTool`:
 
 ```bash
-cd markdown
+cd Markdown
 javac MarkdownTool.java
 jar -cfev markdownTool.jar MarkdownTool MarkdownTool.class
 java -jar markdownTool.jar
@@ -33,8 +33,6 @@ mvn cleanmvn package
 mv target/FanfouAlbumTool-1.0-SNAPSHOT-jar-with-dependencies.jar .
 java -jar FanfouAlbumTool-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
-
-
 
 # License
 
