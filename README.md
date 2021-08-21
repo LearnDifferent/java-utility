@@ -1,6 +1,6 @@
 # Description
 
-My Java tools and utilities
+Tools and utilities, written in Java.
 
 # Quick Start
 
