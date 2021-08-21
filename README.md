@@ -22,6 +22,20 @@ jar -cfev markdownTool.jar MarkdownTool MarkdownTool.class
 java -jar markdownTool.jar
 ```
 
-# License 
+## Build a jar with Maven and run it
+
+Take  "Fanfou Album Download Tool" for example. The directory is [FanfouAlbumDownloadTool](./FanfouAlbumDownloadTool) :
+
+```bash
+cd FanfouAlbumDownloadTool
+mvn cleanmvn
+mvn cleanmvn package
+mv target/FanfouAlbumTool-1.0-SNAPSHOT-jar-with-dependencies.jar .
+java -jar FanfouAlbumTool-1.0-SNAPSHOT-jar-with-dependencies.jar
+```
+
+
+
+# License
 
 Released under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt).
