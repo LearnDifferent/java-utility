@@ -13,7 +13,10 @@ public class MarkdownTool {
     private static final String SEP = "=================================";
 
     public static void main(String[] args) {
+        runTool();
+    }
 
+    private static void runTool() {
         try (Scanner scanner = new Scanner(System.in);
              FileOutputStream fos = new FileOutputStream(getLogFile());
              OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
@@ -33,11 +36,9 @@ public class MarkdownTool {
         // 当前目录创建一个名为 markdown_temp 的目录，并在其中存储记录
         File file = new File("markdown_temp", filename);
 
-        if (file.getParentFile().mkdirs() || file.createNewFile()) {
-            return file;
-        } else {
-            throw new IOException("Fail to Create Log File");
-        }
+        file.getParentFile().mkdirs();
+        file.createNewFile();
+        return file;
     }
 
     private static void runTool(Scanner scanner, PrintWriter pw) {
@@ -214,7 +215,7 @@ public class MarkdownTool {
                 // 存储该 key 到需要删除的 keys 列表中
                 keysToDelete.add(key);
             } catch (NumberFormatException | IndexOutOfBoundsException e) {
-                System.out.println(n + " is not an appropriate number.");
+                System.err.println(n + " is not an appropriate number.");
             }
         });
 
