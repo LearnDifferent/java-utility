@@ -188,7 +188,7 @@ public class FanfouAlbumDownloadTool {
             downloadPhoto(photoUrls, albumName, logWriter);
             // 输出
             printToConsoleAndLog("Downloaded page " + i, logWriter);
-            slowDown(3);
+            slowDown(1000);
         }
     }
 
@@ -259,7 +259,7 @@ public class FanfouAlbumDownloadTool {
              FileOutputStream fos = new FileOutputStream(getPhotoFile(photoUrl, albumName));
              DataOutputStream out = new DataOutputStream(fos)
         ) {
-            byte[] buffer = new byte[2048];
+            byte[] buffer = new byte[1024];
 
             for (int len = in.read(buffer); len > 0; len = in.read(buffer)) {
                 out.write(buffer, 0, len);
@@ -269,14 +269,15 @@ public class FanfouAlbumDownloadTool {
         } catch (IOException | NullPointerException e) {
             printToConsoleAndLog("Fail to download: " + photoUrl, logWriter);
         } finally {
-            slowDown(1);
+            slowDown(3000);
         }
     }
 
-    private static void slowDown(int second) {
+    private static void slowDown(int maxMilliSecPause) {
         try {
-            // 限制下载速度，防止被判定为机器人
-            TimeUnit.SECONDS.sleep(second);
+            // 防止被判定为机器人
+            Random random = new Random();
+            TimeUnit.MILLISECONDS.sleep(random.nextInt(maxMilliSecPause));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
