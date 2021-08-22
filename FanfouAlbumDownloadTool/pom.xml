@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>FanfouAlbumTool</artifactId>
+    <artifactId>FanfouAlbumDownloadTool</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -31,6 +31,10 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
+                            <!-- 设定打包后的名称 -->
+                            <finalName>FanfouAlbumDownloadTool</finalName>
+                            <!-- 不要在后面添加其他 ID -->
+                            <appendAssemblyId>false</appendAssemblyId>
                             <archive>
                                 <manifest>
                                     <mainClass>
