@@ -28,10 +28,9 @@ Take  "Fanfou Album Download Tool" for example. The directory is [FanfouAlbumDow
 
 ```bash
 cd FanfouAlbumDownloadTool
-mvn cleanmvn
-mvn cleanmvn package
-mv target/FanfouAlbumTool-1.0-SNAPSHOT-jar-with-dependencies.jar .
-java -jar FanfouAlbumTool-1.0-SNAPSHOT-jar-with-dependencies.jar
+mvn package
+mv target/FanfouAlbumDownloadTool.jar tool.jar
+java -jar tool.jar
 ```
 
 # License
