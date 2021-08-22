@@ -14,12 +14,9 @@ import java.util.concurrent.TimeUnit;
 public class FanfouAlbumDownloadTool {
 
     private static final Map<String, String> HEADERS;
-    private static String ALBUM_NAME;
-    private static final String ALBUM_URL_PREFIX = "https://fanfou.com/album/";
+    private static final String ALBUM_URL_PREFIX = "https://fanfou.com/album";
 
     static {
-        // 初始化默认本地相册目录
-        ALBUM_NAME = "";
         // 初始化 header
         HEADERS = new HashMap<>();
         HEADERS.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
@@ -38,18 +35,32 @@ public class FanfouAlbumDownloadTool {
         try (Scanner sc = new Scanner(System.in)) {
             downloadAlbums(sc);
         } catch (HttpStatusException e) {
-            System.err.println("Incorrect Album Url: Please check again");
+            System.err.println("Incorrect Album Url Or Cookie: Please check again");
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
     private static void downloadAlbums(Scanner sc) throws IOException, InterruptedException {
-        String albumUrl = getAlbumUrlAndSetAlbumName(sc);
+        // 获取用户输入的 URL
+        String typeInAlbumUrl = getTypeInAlbumUrl(sc);
+        // 获取 cookie
+        Map<String, String> cookies = getCookies(sc);
 
+        // 获取网页中，含有 Album 信息的元素
+        Element albumInfo = getAlbumInfoElement(typeInAlbumUrl, cookies);
+
+        // 获取用户名称作为 Album 名称
+        String albumName = albumInfo.getElementsByTag("img").attr("alt");
+        // 获取当前 Album 的 URL：
+        String albumUrl = ALBUM_URL_PREFIX +
+                albumInfo.getElementsByTag("a").attr("href");
+
+        System.out.println("About to download " + albumName + "'s album: " + albumUrl);
+
+        // 获取需要下载的页数
         int from;
         int to;
-
         while (true) {
             try {
                 System.out.println("Download from which page ?");
@@ -66,20 +77,20 @@ public class FanfouAlbumDownloadTool {
             }
         }
 
-        // 获取 cookie
-        Map<String, String> cookies = getCookies(sc);
-
         // 如果 from 小于 1，就设定为 1，
         for (int i = Math.max(from, 1); i <= to; i++) {
+            // 获取当前页数的 Album 的所有照片的 URL
             List<String> photoUrls = getPhotoUrls(albumUrl + "/p." + i, cookies);
-            downloadPhotos(photoUrls);
+            // 下载照片
+            downloadPhoto(photoUrls,albumName);
             System.out.println("Downloaded page " + i);
+            // todo 输出到 log
             // 限制下载速度，防止被判定为机器人
             TimeUnit.SECONDS.sleep(3);
         }
     }
 
-    private static String getAlbumUrlAndSetAlbumName(Scanner sc) throws IOException {
+    private static String getTypeInAlbumUrl(Scanner sc) {
         String url;
 
         while (true) {
@@ -91,11 +102,7 @@ public class FanfouAlbumDownloadTool {
             System.err.println("URL is not valid. Please try again.");
         }
 
-        if (!setAlbumName(url)) {
-            throw new IOException("Can't get the album.");
-        }
-
-        return ALBUM_URL_PREFIX + ALBUM_NAME;
+        return url;
     }
 
     private static boolean albumUrlCheck(String url) {
@@ -105,16 +112,6 @@ public class FanfouAlbumDownloadTool {
         }
         // 判断网页格式是否正确
         return url.startsWith(ALBUM_URL_PREFIX);
-    }
-
-    private static boolean setAlbumName(String url) {
-        String word = "album/";
-        int from = url.indexOf(word) + word.length();
-        int to = url.lastIndexOf("/");
-        to = to <= from ? url.length() : to;
-        ALBUM_NAME = url.substring(from, to);
-        // 如果 ALBUM_NAME 为空，说明出错了
-        return !"".equals(ALBUM_NAME);
     }
 
     private static Map<String, String> getCookies(Scanner sc) {
@@ -143,61 +140,24 @@ public class FanfouAlbumDownloadTool {
         return map;
     }
 
-    private static void downloadPhotos(List<String> photoUrls) {
-        photoUrls.forEach(FanfouAlbumDownloadTool::downloadPhotoOnce);
+    private static Element getAlbumInfoElement(String typeInAlbumUrl, Map<String, String> cookies) throws IOException {
+        Connection.Response response = Jsoup.connect(typeInAlbumUrl)
+                .headers(HEADERS)
+                .cookies(cookies)
+                .timeout(10_000)
+                .ignoreContentType(true)
+                .execute();
+
+        String body = response.body();
+        Document document = Jsoup.parse(body);
+        Elements avatar = document.getElementsByClass("avatar");
+        return avatar.get(0);
     }
 
-    private static void downloadPhotoOnce(String photoUrl) {
-        URL url = null;
-        try {
-            url = new URL(photoUrl);
-        } catch (MalformedURLException e) {
-            System.err.println("URL is not valid: " + photoUrl);
-        }
+    private static List<String> getPhotoUrls(String currentAlbumUrl,
+                                             Map<String, String> cookies) throws IOException {
 
-        try (DataInputStream in = new DataInputStream(Objects.requireNonNull(url).openStream());
-             FileOutputStream fos = new FileOutputStream(getPhotoFile(photoUrl));
-             DataOutputStream out = new DataOutputStream(fos)
-        ) {
-            byte[] buffer = new byte[4096];
-
-            for (int len = in.read(buffer); len > 0; len = in.read(buffer)) {
-                out.write(buffer, 0, len);
-            }
-
-            System.out.println("Done.");
-        } catch (IOException | NullPointerException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                // 限制下载速度，防止被判定为机器人
-                TimeUnit.SECONDS.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static File getPhotoFile(String url) throws IOException {
-        int index = url.lastIndexOf("/");
-        String filename = url.substring(index + 1);
-        File file = new File(ALBUM_NAME, filename);
-
-        if (file.getParentFile().mkdirs()) {
-            System.out.println("Create Album Directory: " + ALBUM_NAME);
-        }
-
-        if (!file.createNewFile()) {
-            throw new IOException("Photo exists: " + filename);
-        }
-
-        System.out.println("Downloading: " + filename);
-        return file;
-    }
-
-    private static List<String> getPhotoUrls(String albumUrl, Map<String, String> cookies) throws IOException {
-
-        Connection.Response response = Jsoup.connect(albumUrl)
+        Connection.Response response = Jsoup.connect(currentAlbumUrl)
                 .headers(HEADERS)
                 .cookies(cookies)
                 .timeout(10_000)
@@ -209,17 +169,70 @@ public class FanfouAlbumDownloadTool {
         Elements photos = document.getElementsByClass("photo");
 
         List<String> list = new ArrayList<>();
-        photos.forEach(p -> list.add(getPhotoUrl(p)));
+        photos.forEach(p -> list.add(getOriginPhotoUrl(p)));
         return list;
     }
 
-
-    private static String getPhotoUrl(Element p) {
+    private static String getOriginPhotoUrl(Element p) {
         String url = p.getElementsByTag("img").attr("src");
 
         // 饭否的照片会在 URL 地址后面加上类似 @120w_120h_1l.jpg 的字符串来展示缩略图
         // 只要去除了 @ 及后面的字符串，就是原图的 URL
         String[] split = url.split("@");
         return split[0];
+    }
+
+    private static void downloadPhoto(List<String> photoUrls, String albumName) {
+        photoUrls.forEach(url -> downloadPhoto(url, albumName));
+    }
+
+    private static void downloadPhoto(String photoUrl, String albumName) {
+        // 获取 URL 实体类
+        URL url = null;
+        try {
+            url = new URL(photoUrl);
+        } catch (MalformedURLException e) {
+            System.err.println("URL is not valid: " + photoUrl);
+        }
+
+        try (DataInputStream in = new DataInputStream(Objects.requireNonNull(url).openStream());
+             FileOutputStream fos = new FileOutputStream(getPhotoFile(photoUrl, albumName));
+             DataOutputStream out = new DataOutputStream(fos)
+        ) {
+            byte[] buffer = new byte[2048];
+
+            for (int len = in.read(buffer); len > 0; len = in.read(buffer)) {
+                out.write(buffer, 0, len);
+            }
+
+            System.out.println("Done.");
+        } catch (IOException | NullPointerException e) {
+            e.printStackTrace();
+        } finally {
+            // todo log?
+            try {
+                // 限制下载速度，防止被判定为机器人
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static File getPhotoFile(String url, String parentPath) throws IOException {
+        int index = url.lastIndexOf("/");
+        String filename = url.substring(index + 1);
+        File file = new File(parentPath, filename);
+
+        if (file.getParentFile().mkdirs()) {
+            System.out.println("Create Album Directory: " + parentPath);
+        }
+
+        if (!file.createNewFile()) {
+            throw new IOException("Photo exists: " + filename);
+        }
+
+        System.out.println("Downloading: " + filename);
+        return file;
     }
 }
