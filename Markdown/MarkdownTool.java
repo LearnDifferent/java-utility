@@ -79,7 +79,8 @@ public class MarkdownTool {
     }
 
     private static String getId(String word) {
-        return word.trim().toLowerCase().replaceAll(" ", "-");
+        // 将所有非数字和非字母的字符，替换为 - 符号
+        return word.trim().toLowerCase().replaceAll("\\W", "-");
     }
 
     private static void changeIdIfNecessary(Scanner scanner) {
