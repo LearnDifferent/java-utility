@@ -1,10 +1,14 @@
-# 使用场景
+# FanfouAlbumDownloadTool
 
-下载饭否用户的相册。
+> 下载饭否用户的相册
 
-# 使用方法
+## 运行方法
 
-假设要下载饭否用户“王兴”的相册
+参考：[java-utility](https://github.com/LearnDifferent/java-utility) 仓库的 [README](https://github.com/LearnDifferent/java-utility#build-a-jar-with-maven-and-run-it)
+
+## 使用方法
+
+假设要下载饭否用户“王兴”的相册：
 
 一、在 Chrome 浏览器中，打开该用户的相册的页面，比如进入 https://fanfou.com/album/wangxing 的页面。
 
@@ -16,5 +20,4 @@
 
 五、记录下刚刚 copy 的 value，以及相册网页链接 https://fanfou.com/album/wangxing
 
-六、运行 `FanfouAlbumDownloadTool` ，根据提示，输入相册的网页链接、需要下载的相册页数和刚刚复制的 cookie，即可自动下载
-
+六、运行 `FanfouAlbumDownloadTool` ，根据提示，在命令行中输入相册的网页链接、刚刚复制的 cookie 和需要下载的相册页数，即可自动下载
