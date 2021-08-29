@@ -2,51 +2,65 @@
 
 Tools and utilities, written in Java.
 
-## Quick Start
+## Table of Contents
 
-### Clone and go into this repository
+* [Cloning the repository](#cloning-the-repository)
+* [Building and Running](#building-and-running)
+	* [Build a JAR file and run it](#build-a-jar-file-and-run-it) 
+	* [Build a JAR file with Maven and run it](#build-a-jar-file-with-maven-and-run-it)
+* [License](#license)
+
+## Cloning the repository
+
+Clone the repository into a local directory:
 
 ```bash
-# Clone this repository
-$ git clone git@github.com:LearnDifferent/java-utility.git
+# Clone the repository
+git clone git@github.com:LearnDifferent/java-utility.git
 
 # Go into the repository
-$ cd java-utility
+cd java-utility
 ```
 
-### Build a JAR and run it
+Or you can [click here](https://github.com/LearnDifferent/java-utility/archive/refs/heads/master.zip) to download the zip file containing the code.
 
-Take "Markdown Tool" for example. The directory is [Markdown](./Markdown) and the Main Class is `MarkdownTool`:
+## Building and Running
+
+### Build a JAR file and run it
+
+Take "Markdown Tool" for example. The directory is [Markdown](./Markdown) and the Main Class is `MarkdownTool` :
 
 ```bash
 # Go into the directory 
-$ cd Markdown
+cd Markdown
 
 # Build a JAR file
-$ javac MarkdownTool.java
-$ jar -cfev markdownTool.jar MarkdownTool MarkdownTool.class
+javac MarkdownTool.java
+jar -cfev markdownTool.jar MarkdownTool MarkdownTool.class
 
 # Run the JAR file
-$ java -jar markdownTool.jar
+java -jar markdownTool.jar
 ```
 
-### Build a jar with Maven and run it
+### Build a JAR file with Maven and run it
 
-Take  "Fanfou Album Download Tool" for example. The directory is [FanfouAlbumDownloadTool](./FanfouAlbumDownloadTool) :
+Take "Fanfou Album Download Tool" for example. The directory is [FanfouAlbumDownloadTool](./FanfouAlbumDownloadTool) :
 
 ```bash
 # Go into the directory 
-$ cd FanfouAlbumDownloadTool
+cd FanfouAlbumDownloadTool
 
 # Build a JAR file
-$ mvn package
+mvn package
 
 # Rename the JAR file and move it to current directory
-$ mv target/FanfouAlbumDownloadTool.jar tool.jar
+mv target/FanfouAlbumDownloadTool.jar tool.jar
 
 # Run the JAR file
-$ java -jar tool.jar
+java -jar tool.jar
 ```
+
+Remember to use the JAR file **WITHOUT** the suffix **SNAPSHOT**.
 
 ## License
 
