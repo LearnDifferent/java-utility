@@ -1,16 +1,67 @@
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
 
 public class MarkdownTool {
 
+    /**
+     * 输入的词
+     */
     private static String word;
+
+    /**
+     * 输入的词的 ID
+     */
     private static String id;
-    // key: word, value: id
+
+    /**
+     * key: word, value: id
+     */
     private static final Map<String, String> TOC = new LinkedHashMap<>();
-    // 上下分隔符
+
+    /**
+     * 上下分隔符
+     */
     private static final String SEP = "=================================";
+
+    /**
+     * y 表示 Yes
+     */
+    private static final String YES = "y";
+
+    /**
+     * n 表示 No
+     */
+    private static final String NO = "no";
+
+    /**
+     * d 表示 delete
+     */
+    private static final String DELETE = "d";
+
+    /**
+     * c 表示 change
+     */
+
+    private static final String CHANGE = "c";
+    /**
+     * 时间格式
+     */
+    private static final String PATTERN_FORMAT = "yyyy_MM_dd_HH_mm_ss_SSS";
+
 
     public static void main(String[] args) {
         runTool();
@@ -29,10 +80,11 @@ public class MarkdownTool {
     }
 
     private static File getLogFile() throws IOException {
-        Calendar calendar = Calendar.getInstance();
-        Date time = calendar.getTime();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS");
-        String filename = "log_" + sdf.format(time) + ".txt";
+
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(PATTERN_FORMAT);
+        String formattedInstant = dateTimeFormatter.format(Instant.now());
+
+        String filename = "log_" + formattedInstant + ".txt";
         // 当前目录创建一个名为 markdown_temp 的目录，并在其中存储记录
         File file = new File("markdown_temp", filename);
 
@@ -54,21 +106,21 @@ public class MarkdownTool {
                 continue;
             }
 
-            id = getId(word);
+            id = getIdOfWord(word);
 
             System.out.println("Word: " + word);
             System.out.println("ID: " + id);
 
             System.out.println("Customize? (y/n, default: n)");
 
-            if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
+            if (YES.equalsIgnoreCase(scanner.nextLine().trim())) {
                 changeIdIfNecessary(scanner);
                 printResultIfEmphasis(scanner, pw);
             } else {
                 printResult(pw);
             }
 
-            // 将 word 和 id 加入进去
+            // 将 word 和 id 加入 Table of contents 中
             TOC.put(word, id);
 
             System.out.println("Type in Another Word, or Hit Enter to Exit:");
@@ -78,7 +130,7 @@ public class MarkdownTool {
         generateTocIfNecessary(scanner, pw);
     }
 
-    private static String getId(String word) {
+    private static String getIdOfWord(String word) {
         // 将所有非数字和非字母的字符，替换为 - 符号
         return word.trim().toLowerCase().replaceAll("\\W", "-");
     }
@@ -87,7 +139,7 @@ public class MarkdownTool {
 
         System.out.println("Change ID? (y/n), default: n");
 
-        if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
+        if (YES.equalsIgnoreCase(scanner.nextLine().trim())) {
 
             System.out.println("Type in ID:");
 
@@ -106,7 +158,7 @@ public class MarkdownTool {
 
         System.out.println("Emphasize Word? (y/n), default: n");
 
-        if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
+        if (YES.equalsIgnoreCase(scanner.nextLine().trim())) {
             String line1 = "**<span id=\"" + id + "\">" + word + "</span>**";
             String line2 = "**[" + word + "](#" + id + ")**";
 
@@ -136,7 +188,7 @@ public class MarkdownTool {
         System.out.println("Generate TOC? (y/n), default: y");
 
         // 只要不是 n，就打印 TOC
-        if (!scanner.nextLine().equalsIgnoreCase("n")) {
+        if (!NO.equalsIgnoreCase(scanner.nextLine())) {
 
             printCurrentToc();
             deleteElementInToc(scanner);
@@ -176,7 +228,7 @@ public class MarkdownTool {
 
             String flag = scanner.nextLine().trim();
 
-            if (flag.equalsIgnoreCase("d")) {
+            if (DELETE.equalsIgnoreCase(flag)) {
                 // 每个 keysToDelete 中的词，都是 toc 中需要删除的 key
                 keysToDelete.forEach(key -> {
                     TOC.remove(key);
@@ -184,11 +236,11 @@ public class MarkdownTool {
                 });
                 printCurrentToc();
                 System.out.println("Type in 'd' to delete more; Hit Enter to print TOC");
-                if (!scanner.nextLine().trim().equalsIgnoreCase("d")) {
+                if (!DELETE.equalsIgnoreCase(scanner.nextLine().trim())) {
                     // 只要输入的不是 d，就断开循环
                     break;
                 }
-            } else if (flag.equalsIgnoreCase("c")) {
+            } else if (CHANGE.equalsIgnoreCase(flag)) {
                 // 打印一下当前 wordList，然后继续 while 循环
                 printCurrentToc();
             } else {
