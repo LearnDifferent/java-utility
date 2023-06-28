@@ -70,4 +70,9 @@ crashlytics-build.properties
 fabric.properties
 .idea/httpRequests
 .idea/caches/build_file_checksums.ser
+
 /books_output/
+/fail_*.txt
+*.epub
+*.mobi
+metadata.opf
