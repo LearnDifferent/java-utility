@@ -88,7 +88,7 @@ public class CalibreTool {
      * @return 保存了执行信息的文件的路径
      */
     private static String outputMessageFile() {
-        String fileName = "." + File.separator + "fail_msg_"
+        String fileName = "." + File.separator + "calibre_msg_"
                 + System.currentTimeMillis() + ".txt";
         File file = new File(fileName);
 
