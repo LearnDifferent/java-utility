@@ -162,7 +162,7 @@ public class CalibreTool {
             failCount++;
             saveFailMessage(source, target);
             System.err.println("File name contains invalid characters: [Source: "
-                    + getCanonicalPath(source) + ", [Target: " + target.getName() + "]");
+                    + getCanonicalPath(source) + "], [Target: " + target.getName() + "]");
         } catch (IOException e) {
             saveFailMessage(source, target);
             if (e instanceof FileAlreadyExistsException) {
