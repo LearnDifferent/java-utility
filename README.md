@@ -26,6 +26,24 @@ Or you can [click here](https://github.com/LearnDifferent/java-utility/archive/r
 
 ## Building and Running
 
+### Compile a Java file and execute it
+
+Take "CalibreTool" for example. The directory is [CalibreTool](./CalibreTool):
+
+```
+# Go into the directory 
+cd CalibreTool
+
+# Go into the source directory
+cd src
+
+# Compile the Java file
+javac CalibreTool.java -encoding UTF-8
+
+# Run the Java program
+java CalibreTool
+```
+
 ### Build a JAR file and run it
 
 Take "Markdown Tool" for example. The directory is [Markdown](./Markdown) and the Main Class is `MarkdownTool` :
@@ -35,7 +53,7 @@ Take "Markdown Tool" for example. The directory is [Markdown](./Markdown) and th
 cd Markdown
 
 # Build a JAR file
-javac MarkdownTool.java
+javac MarkdownTool.java -encoding UTF-8
 jar -cfev markdownTool.jar MarkdownTool MarkdownTool.class
 
 # Run the JAR file
