@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.util.Arrays;
@@ -57,6 +58,11 @@ public class CalibreTool {
     public static int failCount = 0;
 
     /**
+     * 已经存在次数
+     */
+    public static int existCount = 0;
+
+    /**
      * 失败的文件：key 为文件应该的名称（title），value 为原文件所在路径（文件所在文件夹）
      */
     public static final Map<String, String> FAIL_MAP = new HashMap<>();
@@ -98,6 +104,7 @@ public class CalibreTool {
 
             pw.println("Success：" + successCount);
             pw.println("Failure: " + failCount);
+            pw.println("Already exists: " + existCount);
             pw.println("===============================================");
 
             FAIL_MAP.forEach((k, v) -> {
@@ -110,7 +117,7 @@ public class CalibreTool {
             e.printStackTrace();
         }
 
-        return file.getAbsolutePath();
+        return getCanonicalPath(file);
     }
 
     private static void copyAndRenameFile(File directory, String title) {
@@ -155,13 +162,27 @@ public class CalibreTool {
             failCount++;
             saveFailMessage(source, target);
             System.err.println("File name contains invalid characters: [Source: "
-                    + source.getAbsolutePath() + ", [Target: " + target.getName() + "]");
+                    + getCanonicalPath(source) + ", [Target: " + target.getName() + "]");
         } catch (IOException e) {
-            failCount++;
             saveFailMessage(source, target);
+            if (e instanceof FileAlreadyExistsException) {
+                existCount++;
+                System.out.println(target.getName() + " already exists");
+                return;
+            }
+
+            failCount++;
             System.err.println("Fail: [Source: "
                     + source.getName() + ", [Target: " + target.getName() + "]"
                     + ", [Reason: " + e.getMessage() + "]");
+        }
+    }
+
+    private static String getCanonicalPath(File file) {
+        try {
+            return file.getCanonicalPath();
+        } catch (IOException e) {
+            throw new RuntimeException("读取文件失败");
         }
     }
 
@@ -170,7 +191,8 @@ public class CalibreTool {
         int idx = name.lastIndexOf(".");
         String title = name.substring(0, idx);
 
-        String directory = source.getParentFile().getAbsolutePath();
+        File parentFile = source.getParentFile();
+        String directory = getCanonicalPath(parentFile);
 
         FAIL_MAP.put(title, directory);
     }
