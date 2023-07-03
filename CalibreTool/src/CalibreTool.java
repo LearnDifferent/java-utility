@@ -10,13 +10,10 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -75,18 +72,18 @@ public class CalibreTool {
             + File.separator + "books_output" + File.separator;
 
     public static void main(String[] args) {
-        List<File> allCurrentDirectories = getAllCurrentDirectories();
-
-        for (File currentDirectory : allCurrentDirectories) {
-            File targetParentDir = getDirectoryContainsTargetFile(currentDirectory);
-            if (Objects.nonNull(targetParentDir)) {
-                String title = getTitle(targetParentDir);
-                copyAndRenameFile(targetParentDir, title);
-            }
-        }
+        listCurrentDirectories().forEach(CalibreTool::findAndCopyAndRenameTargetFile);
 
         String messagePath = outputMessageFile();
         System.out.println("Message has been stored at: " + messagePath);
+    }
+
+    private static void findAndCopyAndRenameTargetFile(File currentDirectory) {
+        File targetParentDir = getDirectoryContainsTargetFile(currentDirectory);
+        if (Objects.nonNull(targetParentDir)) {
+            String title = getTitle(targetParentDir);
+            copyAndRenameFile(targetParentDir, title);
+        }
     }
 
     /**
@@ -122,16 +119,7 @@ public class CalibreTool {
     }
 
     private static void copyAndRenameFile(File directory, String title) {
-        try {
-            copyAndRenameFile(directory.toPath(), title);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void copyAndRenameFile(Path path, String title) throws IOException {
-        Files.list(path)
-                .map(Path::toFile)
+        listFileToStream(directory)
                 .filter(CalibreTool::checkIfFilenameEndsWithBookSuffix)
                 .forEach(file -> getOutputFileAndCopyFile(title, file));
     }
@@ -228,16 +216,19 @@ public class CalibreTool {
         }
     }
 
-    private static List<File> getAllCurrentDirectories() {
-        File file = new File(".");
-        File[] files = file.listFiles();
-        assert files != null;
-
-        return Arrays.stream(files)
-                .filter(File::isDirectory)
-                .collect(Collectors.toList());
+    private static Stream<File> listFileToStream(File file) {
+        try {
+            return Files.list(file.toPath())
+                    .map(Path::toFile);
+        } catch (IOException e) {
+            throw new RuntimeException("读取文件失败");
+        }
     }
 
+    private static Stream<File> listCurrentDirectories() {
+        return listFileToStream(new File("."))
+                .filter(File::isDirectory);
+    }
 
     /**
      * 根据父路径，查询子路径中包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径
