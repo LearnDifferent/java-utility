@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +31,7 @@ public class CalibreTool {
     /**
      * 相应的后缀
      */
-    public static final Set<String> BOOK_SUFFIX = Set.of(".mobi", ".epub");
+    public static final Set<String> BOOK_SUFFIXES = Set.of(".mobi", ".epub");
 
     /**
      * 含有标题的文件名
@@ -121,24 +122,28 @@ public class CalibreTool {
     }
 
     private static void copyAndRenameFile(File directory, String title) {
-        File[] files = directory.listFiles();
-        assert files != null;
+        try {
+            copyAndRenameFile(directory.toPath(), title);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-        List<File> targetFiles = Arrays.stream(files)
-                .filter(file -> {
-                    String name = file.getName();
-                    for (String bookSuffix : BOOK_SUFFIX) {
-                        if (name.endsWith(bookSuffix)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }).collect(Collectors.toList());
+    private static void copyAndRenameFile(Path path, String title) throws IOException {
+        Files.list(path)
+                .map(Path::toFile)
+                .filter(CalibreTool::checkIfFilenameEndsWithBookSuffix)
+                .forEach(file -> getOutputFileAndCopyFile(title, file));
+    }
 
-        targetFiles.forEach(file -> {
-            File outputFile = getOutputFile(title, file);
-            copyFile(file, outputFile);
-        });
+    private static boolean checkIfFilenameEndsWithBookSuffix(File file) {
+        String name = file.getName();
+        return BOOK_SUFFIXES.stream().anyMatch(name::endsWith);
+    }
+
+    private static void getOutputFileAndCopyFile(String title, File file) {
+        File outputFile = getOutputFile(title, file);
+        copyFile(file, outputFile);
     }
 
     private static File getOutputFile(String title, File file) {
