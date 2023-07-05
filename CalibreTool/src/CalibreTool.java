@@ -72,18 +72,42 @@ public class CalibreTool {
             + File.separator + "books_output" + File.separator;
 
     public static void main(String[] args) {
-        listCurrentDirectories().forEach(CalibreTool::findAndCopyAndRenameTargetFile);
+
+        listCurrentDirectories()
+                .map(CalibreTool::getDirectoryContainsTargetFile)
+                .filter(Objects::nonNull)
+                .forEach(CalibreTool::copyAndRenameFile);
 
         String messagePath = outputMessageFile();
         System.out.println("Message has been stored at: " + messagePath);
     }
 
-    private static void findAndCopyAndRenameTargetFile(File currentDirectory) {
-        File targetParentDir = getDirectoryContainsTargetFile(currentDirectory);
-        if (Objects.nonNull(targetParentDir)) {
-            String title = getTitle(targetParentDir);
-            copyAndRenameFile(targetParentDir, title);
+    private static void copyAndRenameFile(File targetParentDir) {
+        String title = getTitle(targetParentDir);
+        copyAndRenameFile(targetParentDir, title);
+    }
+
+    /**
+     * 根据父路径，查询子路径中包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径
+     *
+     * @param parentDirectory 父路径
+     * @return 返回包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径，如果没有就返回 null
+     */
+    private static File getDirectoryContainsTargetFile(File parentDirectory) {
+        File[] filesInParentDir = parentDirectory.listFiles();
+        assert filesInParentDir != null;
+
+        for (File file : filesInParentDir) {
+            if (file.isDirectory()) {
+                return getDirectoryContainsTargetFile(file);
+            }
+
+            if (file.getName().equals(FILE_NAME_WITH_TITLE)) {
+                return file.getParentFile();
+            }
         }
+
+        return null;
     }
 
     /**
@@ -230,28 +254,6 @@ public class CalibreTool {
                 .filter(File::isDirectory);
     }
 
-    /**
-     * 根据父路径，查询子路径中包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径
-     *
-     * @param parentDirectory 父路径
-     * @return 返回包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径，如果没有就返回 null
-     */
-    private static File getDirectoryContainsTargetFile(File parentDirectory) {
-        File[] filesInParentDir = parentDirectory.listFiles();
-        assert filesInParentDir != null;
-
-        for (File file : filesInParentDir) {
-            if (file.isDirectory()) {
-                return getDirectoryContainsTargetFile(file);
-            }
-
-            if (file.getName().equals(FILE_NAME_WITH_TITLE)) {
-                return file.getParentFile();
-            }
-        }
-
-        return null;
-    }
 
     /**
      * 在 {@link #FILE_NAME_WITH_TITLE} 文件中获取需要的标题
