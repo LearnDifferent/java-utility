@@ -6,6 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * 读取 Calibre 目录中的 metadata.opf 里面的 <dc:title> 标签作为书的标题，
@@ -92,14 +94,42 @@ public class CalibreTool {
      *
      * @param parentDirectory 父路径
      * @return 返回包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径，如果没有就返回 null
+     * @see #getDirectoryContainsTargetFileNormal(File)
+     * @see #getDirectoryContainsTargetFileStreamParallel(File)
+     * @see #getDirectoryContainsTargetFileNewDirectoryStream(File)
      */
     private static File getDirectoryContainsTargetFile(File parentDirectory) {
+        return walkDirectory(parentDirectory)
+                .filter(Files::isRegularFile)
+                .filter(file -> FILE_NAME_WITH_TITLE.equals(file.getFileName().toString()))
+                .findFirst()
+                .map(Path::getParent)
+                .map(Path::toFile)
+                .orElse(null);
+    }
+
+    private static Stream<Path> walkDirectory(File parentDirectory) {
+        try {
+            return Files.walk(parentDirectory.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("读取文件失败");
+        }
+    }
+
+    /**
+     * 根据父路径，查询子路径中包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径的初始方法
+     *
+     * @param parentDirectory 父路径
+     * @return 返回包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径，如果没有就返回 null
+     */
+    private static File getDirectoryContainsTargetFileNormal(File parentDirectory) {
         File[] filesInParentDir = parentDirectory.listFiles();
         assert filesInParentDir != null;
 
         for (File file : filesInParentDir) {
             if (file.isDirectory()) {
-                return getDirectoryContainsTargetFile(file);
+                return getDirectoryContainsTargetFileNormal(file);
             }
 
             if (file.getName().equals(FILE_NAME_WITH_TITLE)) {
@@ -108,6 +138,73 @@ public class CalibreTool {
         }
 
         return null;
+    }
+
+    /**
+     * {@link #getDirectoryContainsTargetFileNormal(File)} 的 Stream API 实现方式。
+     * 缺点就是同一个 {@code parentDirectory} 为了区分 File 和 Directory 做出不同的动作而遍历了 2 次
+     *
+     * @param parentDirectory 父路径
+     * @return 返回包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径，如果没有就返回 null
+     */
+    private static File getDirectoryContainsTargetFileStreamParallel(File parentDirectory) {
+        return listFileToStream(parentDirectory)
+                .parallel()
+                .filter(File::isDirectory)
+                .map(CalibreTool::getDirectoryContainsTargetFileStreamParallel)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElseGet(() ->
+                        listFileToStream(parentDirectory)
+                                .filter(File::isFile)
+                                .filter(file -> FILE_NAME_WITH_TITLE.equals(file.getName()))
+                                .findFirst()
+                                .map(File::getParentFile)
+                                .orElse(null)
+                );
+    }
+
+    /**
+     * {@link #getDirectoryContainsTargetFileNormal(File)} 的 {@link Files#newDirectoryStream(Path)} 实现方式。
+     * <p>
+     * 需要在处理大型目录结构时提高性能，可以尝试使用java.nio.file.DirectoryStream接口。
+     * 与Files.walk()和Files.find()方法不同，DirectoryStream接口可以在遍历过程中进行并行处理，从而加快处理速度
+     * <p>
+     * 在这个方法中用到了 StreamSupport.stream()：
+     * StreamSupport.stream()是一个用于将Iterable、Spliterator或Iterator对象转换为流的工具方法。由于Java 8之前的集合框架中没有流的概念，因此可以使用StreamSupport.stream()方法将现有的集合或迭代器转换为流，以便在流中进行操作。
+     * 例如，在使用DirectoryStream接口时，我们需要将其转换为流以便于使用流操作。可以使用StreamSupport.stream()方法将DirectoryStream对象转换为流，并使用流的方法链进行过滤、映射和查找等操作。
+     * StreamSupport.stream()方法接受两个参数：一个用于提供元素的Spliterator对象和一个用于控制是否并行处理的布尔值。在默认情况下，流是顺序处理的，但是可以将第二个参数设置为true来启用并行处理，以加快处理速度。
+     *
+     * @param parentDirectory 父路径
+     * @return 返回包含 {@link #FILE_NAME_WITH_TITLE} 文件的路径，如果没有就返回 null
+     */
+    private static File getDirectoryContainsTargetFileNewDirectoryStream(File parentDirectory) {
+
+        try (DirectoryStream<Path> dir = Files.newDirectoryStream(parentDirectory.toPath())) {
+            return StreamSupport.stream(dir.spliterator(), true)
+                    .filter(Files::isRegularFile)
+                    .filter(file -> file.getFileName().toString().equals(FILE_NAME_WITH_TITLE))
+                    .findFirst()
+                    .map(Path::getParent)
+                    .map(Path::toFile)
+                    .orElseGet(() -> {
+                        try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(parentDirectory.toPath())) {
+                            return StreamSupport.stream(dirStream.spliterator(), true)
+                                    .filter(Files::isDirectory)
+                                    .map(directory -> getDirectoryContainsTargetFileNewDirectoryStream(
+                                            directory.toFile()))
+                                    .filter(Objects::nonNull)
+                                    .findFirst()
+                                    .orElse(null);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            throw new RuntimeException("读取文件失败");
+                        }
+                    });
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("读取文件失败");
+        }
     }
 
     /**
@@ -221,7 +318,6 @@ public class CalibreTool {
      *
      * @param source 原文件
      * @param target 目标文件
-     * @deprecated
      */
     private static void copyFileWithChannel(File source, File target) {
         try (FileInputStream fis = new FileInputStream(source);
