@@ -264,7 +264,11 @@ public class CalibreTool {
 
         File outputFile = new File(pathname);
         File parentFile = outputFile.getParentFile();
-        parentFile.mkdirs();
+        try {
+            Files.createDirectories(parentFile.toPath());
+        } catch (IOException e) {
+            throw new RuntimeException("创建目录失败");
+        }
         return outputFile;
     }
 
